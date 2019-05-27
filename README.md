@@ -19,4 +19,4 @@ npm start
 ## Contribute
 Join us on Discord: https://discord.gg/je27JSc
 
-Read the documentati  on here: https://docs.nile.shopping/ss
+Read the documentation here: https://docs.nile.shopping/
