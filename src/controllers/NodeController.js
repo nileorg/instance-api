@@ -1,4 +1,5 @@
 const Node = require('../models/Node')
+const Queue = require('../models/Queue')
 const randomstring = require('randomstring')
 
 module.exports = class NodeController {
@@ -6,24 +7,25 @@ module.exports = class NodeController {
     this.db = db
     this.ddbms = ddbms
     this.model = new Node(db)
+    this.queue = new Queue(db)
     this.online = []
   }
 
-  async create ({ parameters, authentication }) {
+  async create ({ components, name, location, authentication }) {
     let token = randomstring.generate(5) + Date.now()
     const success = this.model.create({
       token: token,
-      components: parameters.components,
+      components: components,
       information: JSON.stringify({
-        name: parameters.name,
-        location: parameters.location
+        name: name,
+        location: location
       })
     })
     if (success) {
-      const protocolRegex = parameters.components.match(/(^\w+:|^)\/\//)
+      const protocolRegex = components.match(/(^\w+:|^)\/\//)
       const ddbms = protocolRegex[0].replace('://', '')
-      const components = parameters.components.replace(/(^\w+:|^)\/\//, '')
-      this.ddbms[ddbms].save(components).catch(() => {})
+      const componentsHash = components.replace(/(^\w+:|^)\/\//, '')
+      this.ddbms[ddbms].save(componentsHash).catch(() => {})
       const { success, results } = await this.isNodeTokenValid(token)
       if (success) {
         this.publishNodesList()
@@ -39,6 +41,19 @@ module.exports = class NodeController {
     } else {
       return {
         status: 404
+      }
+    }
+  }
+  async read ({ authentication }) {
+    const { success, results } = await this.isNodeTokenValid(authentication)
+    if (success) {
+      return {
+        status: 200,
+        body: { node: results[0] }
+      }
+    } else {
+      return {
+        status: 401
       }
     }
   }
@@ -62,22 +77,22 @@ module.exports = class NodeController {
       return false
     }
   }
-  async update ({ parameters, authentication }) {
+  async update ({ components, name, location, authentication }) {
     const { success, results } = await this.isNodeTokenValid(authentication)
     if (success && results.length > 0) {
       const node = results[0]
       const success = this.model.update({
-        components: parameters.components,
+        components: components,
         information: JSON.stringify({
-          name: parameters.name,
-          location: parameters.location
+          name: name,
+          location: location
         }),
         nodeId: node.node_id
       })
       if (success) {
         const updatedOnlineNode = this.online.find(n => n.id === node.node_id)
         if (updatedOnlineNode) {
-          updatedOnlineNode.components = parameters.components
+          updatedOnlineNode.components = components
         }
         return {
           status: 200
@@ -93,7 +108,7 @@ module.exports = class NodeController {
       }
     }
   }
-  async delete ({ parameters, authentication }) {
+  async delete ({ authentication }) {
     const { success, results } = await this.isNodeTokenValid(authentication)
     if (success && results.length > 0) {
       const node = results[0]
@@ -115,17 +130,17 @@ module.exports = class NodeController {
       }
     }
   }
-  async login ({ sender, parameters, authentication }) {
+  async login ({ sender, authentication }) {
     const { success, results } = await this.isNodeTokenValid(authentication)
     const res = results
-    if (success) {
+    if (success && results.length > 0) {
       const node = res[0]
       this.online.push({
         components: node.components,
         id: node.node_id,
         resource: sender
       })
-      const { results } = await this.models.queue.getByRecipientId({ recipientId: node.node_id })
+      const { results } = await this.queue.getByRecipientId({ recipientId: node.node_id })
       return {
         status: 200,
         body: {
@@ -136,13 +151,34 @@ module.exports = class NodeController {
       }
     } else {
       return {
-        status: 500
+        status: 401
       }
     }
   }
-  logoutNode ({ sender }) {
-    this.online = this.online.filter(n => {
-      return !(n.resource === sender)
-    })
+  async logout ({ authentication, sender }) {
+    if (authentication) {
+      const { success, results } = await this.isNodeTokenValid(authentication)
+      const res = results
+      if (success && results.length > 0) {
+        const node = res[0]
+        this.online = this.online.filter(n => {
+          return !(n.resource === sender)
+        })
+        return {
+          status: 200,
+          body: {
+            id: node.node_id
+          }
+        }
+      } else {
+        return {
+          status: 401
+        }
+      }
+    } else {
+      this.online = this.online.filter(n => {
+        return !(n.resource === sender)
+      })
+    }
   }
 }

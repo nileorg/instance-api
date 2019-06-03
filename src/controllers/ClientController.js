@@ -8,13 +8,13 @@ module.exports = class ClientController {
     this.model = new Client(this.db)
     this.queue = new Queue(this.db)
   }
-  async create ({ parameters, authentication }) {
+  async create ({ name, location }) {
     let token = randomstring.generate(5) + Date.now()
     const success = await this.model.create({
       token: token,
       information: JSON.stringify({
-        name: parameters.name,
-        location: parameters.location
+        name: name,
+        location: location
       })
     })
     if (success) {
@@ -36,14 +36,14 @@ module.exports = class ClientController {
       token: token
     })
   }
-  async update ({ parameters, authentication }) {
+  async update ({ name, location, authentication }) {
     const { success, results } = await this.isClientTokenValid(authentication)
     if (success) {
       const client = results[0]
       const success = await this.model.update({
         information: JSON.stringify({
-          name: parameters.name,
-          location: parameters.location
+          name: name,
+          location: location
         }),
         clientId: client.client_id
       })
@@ -62,7 +62,7 @@ module.exports = class ClientController {
       }
     }
   }
-  async delete ({ parameters, authentication }) {
+  async delete ({ authentication }) {
     const { success, results } = await this.isClientTokenValid(authentication)
     if (success && results.length > 0) {
       const client = results[0]

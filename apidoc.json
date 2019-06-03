@@ -1,0 +1,15 @@
+{
+    "name": "Nile Instance API Reference",
+    "version": "0.0.1",
+    "description": "Nile Instance API Reference",
+    "title": "Nile Instance API Reference",
+    "url": "http://localhost:8080",
+    "sampleUrl": "http://localhost:8080",
+    "order": [
+        "ListNodes",
+        "GetNodes",
+        "PostNodes",
+        "PutNodes",
+        "DeleteNodes"
+    ]
+}

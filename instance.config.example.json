@@ -1,0 +1,23 @@
+{
+  "secret": "SECRET_KEY",
+  "initializer": {
+    "HttpServer": {
+      "port": 3000
+    },
+    "WsServer": {
+      "port": 3001
+    },
+    "Sqlite": {
+      "path": "var/instance.db"
+    },
+    "Ipfs": {
+      "path": "var/instance"
+    }
+  },
+  "users": [
+    {
+      "username": "admin",
+      "password": "$2a$04$b7Lugboh.JkJHbsEBRw3OepxraADaZYFgQp.vgWPdcZdLmiNfxo3W"
+    }
+  ]
+}

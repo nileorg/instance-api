@@ -1,2 +1,4 @@
 node_modules
-var
+\.DS_Store
+docs
+instance.config.json
