@@ -1,8 +1,49 @@
 /* global describe before after afterEach it */
 const expect = require('chai').expect
 const io = require('socket.io-client')
+const fetch = require('node-fetch')
+
+class Node {
+  constructor ({ socket }) {
+    this.socket = socket
+  }
+  init () {
+    return new Promise(resolve => {
+      this.socket.on('connect', function () {
+        resolve()
+      })
+    })
+  }
+  close () {
+    this.socket.close()
+  }
+  on (action, callback) {
+    this.socket.on(action, (data, fn) => callback(data, fn))
+  }
+  login ({ authentication }) {
+    return new Promise(resolve => {
+      this.socket.on('logged', (data) => {
+        resolve(data)
+      })
+      this.socket.emit('login', {
+        authentication
+      })
+    })
+  }
+  logout ({ authentication }) {
+    return new Promise(resolve => {
+      this.socket.on('logged_out', data => {
+        resolve(data)
+      })
+      this.socket.emit('logout', {
+        authentication: authentication
+      })
+    })
+  }
+}
 
 describe('Testing instance', function () {
+  let nodeController
   let node
   let socket
   let wsServer
@@ -19,9 +60,10 @@ describe('Testing instance', function () {
         return require('../src/Routes')(services)
       })
       .then((controllers) => {
-        node = controllers.node
+        nodeController = controllers.node
         socket = io.connect('http://localhost:3001')
-        socket.on('connect', function () {
+        node = new Node({ socket })
+        node.init().then(() => {
           done()
         })
       })
@@ -29,7 +71,7 @@ describe('Testing instance', function () {
 
   after(function (done) {
     wsServer.close()
-    socket.close()
+    node.close()
     done()
   })
 
@@ -38,39 +80,52 @@ describe('Testing instance', function () {
       socket.removeListener('logged')
       done()
     })
-    it('Should log in existing node', done => {
-      socket.on('logged', ({ status }) => {
-        expect(status).to.be.equal(200)
-        done()
-      })
-      socket.emit('login', {
+    it('Should log in existing node', async () => {
+      const { status } = await node.login({
         authentication: 'ev8hg1550736689241'
       })
+      expect(status).to.be.equal(200)
     })
-    it('Should not log in non-existing node', function (done) {
-      socket.on('logged', ({ status }) => {
-        expect(status).to.be.equal(401)
-        done()
+    it('Should forward http message via ws instance', async () => {
+      // Socket is node with id 112, it listens to a test action and replies with "response"
+      node.on('test', (data, fn) => {
+        fn({
+          success: true,
+          message: 'test successfull'
+        })
       })
-      socket.emit('login', {
-        authentication: 'fakeid'
+      // This is the client calling the instance forward API, calling the test action on node with id 112
+      const nodeId = 112
+      const action = 'test'
+      const parameters = 'hello'
+      const res = await fetch('http://localhost:8080/forward', {
+        method: 'POST',
+        body: `nodeId=${nodeId}&action=${action}&parameters=${parameters}`,
+        headers: new fetch.Headers({
+          'authentication': 'NZmTj1550736689151'
+        })
       })
+      const data = await res.json()
+      expect(data.success).to.be.equal(true)
+    })
+    it('Should not log in non-existing node', async () => {
+      const { status } = await node.logout({
+        'authentication': 'fakeid'
+      })
+      expect(status).to.be.equal(401)
     })
     /*     it('Should handle connection lost', function (done) {
       console.log(node.online.length)
       socket.disconnect()
       setTimeout(() => console.log(node.online.length), 100)
     }) */
-    it('Should logout', function (done) {
-      const onlineBeforeLogout = node.online.length
-      socket.on('logged_out', ({ status }) => {
-        expect(status).to.be.equal(200)
-        expect(node.online.length).to.be.equal(onlineBeforeLogout - 1)
-        done()
+    it('Should logout', async () => {
+      const onlineBeforeLogout = nodeController.online.length
+      const { status } = await node.logout({
+        'authentication': 'ev8hg1550736689241'
       })
-      socket.emit('logout', {
-        authentication: 'ev8hg1550736689241'
-      })
+      expect(status).to.be.equal(200)
+      expect(nodeController.online.length).to.be.equal(onlineBeforeLogout - 1)
     })
   })
 })

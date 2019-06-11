@@ -170,6 +170,45 @@ module.exports = async ({ wsServer, dispatcher, sqliteDb, ipfsNode }) => {
     respond(res, response)
   })
 
+  /**
+   * @api {post} /forward Forward a message to a node
+   * interfacing WebSocket to HTTP clients
+   * @apiHeader {String} authentication Clients's unique token
+   * @apiVersion 0.0.1
+   * @apiName ForwardMessage
+   * @apiGroup Node
+   * @apiPermission none
+  */
+  dispatcher.onPost('/forward', async (req, res) => {
+    const { success, results } = await client.isClientTokenValid(req.headers.authentication)
+    if (success && results.length > 0) {
+      const clientId = results[0].client_id
+      const onlineNode = node.online.find(n => n.id === parseInt(req.params.nodeId))
+      if (onlineNode) {
+        const wsId = onlineNode.resource
+        const forwardAction = req.params.action
+        const forwardParameters = {
+          parameters: req.params.parameters,
+          clientId
+        }
+        wsServer.sockets.sockets[wsId].emit(forwardAction, forwardParameters, data => {
+          respond(res, {
+            status: 200,
+            body: data
+          })
+        })
+      } else {
+        respond(res, {
+          status: 404
+        })
+      }
+    } else {
+      respond(res, {
+        status: 401
+      })
+    }
+  })
+
   // Handle websocket connections
   wsServer.on('connection', socket => {
     // Login node
