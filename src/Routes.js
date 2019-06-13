@@ -5,6 +5,7 @@ const Db = require('./Db')
 const IpfsDdbms = require('./ddbms/Ipfs')
 const ClientController = require('./controllers/ClientController')
 const NodeController = require('./controllers/NodeController')
+const ForwardController = require('./controllers/ForwardController')
 
 const respond = (res, response) => {
   res.writeHead(response.status, { 'Content-Type': 'application/json' })
@@ -17,6 +18,7 @@ module.exports = async ({ wsServer, dispatcher, sqliteDb, ipfsNode }) => {
     ipfs: new IpfsDdbms(ipfsNode)
   }
   const node = new NodeController(db, ddbms)
+  const forward = new ForwardController(db, wsServer, node, client)
 
   /**
    * Handle CORS requests
@@ -180,33 +182,13 @@ module.exports = async ({ wsServer, dispatcher, sqliteDb, ipfsNode }) => {
    * @apiPermission none
   */
   dispatcher.onPost('/forward', async (req, res) => {
-    const { success, results } = await client.isClientTokenValid(req.headers.authentication)
-    if (success && results.length > 0) {
-      const clientId = results[0].client_id
-      const onlineNode = node.online.find(n => n.id === parseInt(req.params.nodeId))
-      if (onlineNode) {
-        const wsId = onlineNode.resource
-        const forwardAction = req.params.action
-        const forwardParameters = {
-          parameters: req.params.parameters,
-          clientId
-        }
-        wsServer.sockets.sockets[wsId].emit(forwardAction, forwardParameters, data => {
-          respond(res, {
-            status: 200,
-            body: data
-          })
-        })
-      } else {
-        respond(res, {
-          status: 404
-        })
-      }
-    } else {
-      respond(res, {
-        status: 401
-      })
-    }
+    const response = await forward.toNode({
+      authentication: req.headers.authentication,
+      nodeId: req.params.nodeId,
+      action: req.params.action,
+      parameters: req.params.parameters
+    })
+    respond(res, response)
   })
 
   // Handle websocket connections

@@ -42,9 +42,23 @@ class Node {
   }
 }
 
+class Client {
+  constructor ({ instanceUrl }) {
+    this.instanceUrl = instanceUrl
+  }
+  forward ({ nodeId, action, parameters, authentication }) {
+    return fetch(`${this.instanceUrl}/forward`, {
+      method: 'POST',
+      body: `nodeId=${nodeId}&action=${action}&parameters=${parameters}`,
+      headers: new fetch.Headers({ authentication })
+    })
+  }
+}
+
 describe('Testing instance', function () {
   let nodeController
   let node
+  let client
   let socket
   let wsServer
   // increase test timeout to 10 seconds
@@ -61,6 +75,7 @@ describe('Testing instance', function () {
       })
       .then((controllers) => {
         nodeController = controllers.node
+        client = new Client({ instanceUrl: 'http://localhost:8080' })
         socket = io.connect('http://localhost:3001')
         node = new Node({ socket })
         node.init().then(() => {
@@ -95,15 +110,11 @@ describe('Testing instance', function () {
         })
       })
       // This is the client calling the instance forward API, calling the test action on node with id 112
-      const nodeId = 112
-      const action = 'test'
-      const parameters = 'hello'
-      const res = await fetch('http://localhost:8080/forward', {
-        method: 'POST',
-        body: `nodeId=${nodeId}&action=${action}&parameters=${parameters}`,
-        headers: new fetch.Headers({
-          'authentication': 'NZmTj1550736689151'
-        })
+      const res = await client.forward({
+        nodeId: 112,
+        action: 'test',
+        parameters: 'hello',
+        'authentication': 'NZmTj1550736689151'
       })
       const data = await res.json()
       expect(data.success).to.be.equal(true)
