@@ -4,8 +4,9 @@ const io = require('socket.io-client')
 const fetch = require('node-fetch')
 
 class Node {
-  constructor ({ socket }) {
+  constructor ({ socket, instanceUrl }) {
     this.socket = socket
+    this.instanceUrl = instanceUrl
   }
   init () {
     return new Promise(resolve => {
@@ -16,6 +17,13 @@ class Node {
   }
   close () {
     this.socket.close()
+  }
+  forward ({ clientId, action, parameters, authentication }) {
+    return fetch(`${this.instanceUrl}/forward/client`, {
+      method: 'POST',
+      body: `clientId=${clientId}&action=${action}&parameters=${parameters}`,
+      headers: new fetch.Headers({ authentication })
+    })
   }
   on (action, callback) {
     this.socket.on(action, (data, fn) => callback(data, fn))
@@ -47,7 +55,7 @@ class Client {
     this.instanceUrl = instanceUrl
   }
   forward ({ nodeId, action, parameters, authentication }) {
-    return fetch(`${this.instanceUrl}/forward`, {
+    return fetch(`${this.instanceUrl}/forward/node`, {
       method: 'POST',
       body: `nodeId=${nodeId}&action=${action}&parameters=${parameters}`,
       headers: new fetch.Headers({ authentication })
@@ -81,9 +89,10 @@ describe('Testing instance', function () {
       })
       .then((controllers) => {
         nodeController = controllers.node
-        client = new Client({ instanceUrl: 'http://localhost:8080' })
+        const instanceUrl = 'http://localhost:8080'
+        client = new Client({ instanceUrl })
         socket = io.connect('http://localhost:3001')
-        node = new Node({ socket })
+        node = new Node({ socket, instanceUrl })
         node.init().then(() => {
           done()
         })
@@ -136,6 +145,16 @@ describe('Testing instance', function () {
         action: 'test',
         parameters: 'hello',
         'authentication': 'NZmTj1550736689151'
+      })
+      const data = await res.json()
+      expect(data.success).to.be.equal(true)
+    })
+    it('Should forward an message via http instance to offline client', async () => {
+      const res = await node.forward({
+        clientId: 1,
+        action: 'test',
+        parameters: 'hello',
+        'authentication': 'ev8hg1550736689241'
       })
       const data = await res.json()
       expect(data.success).to.be.equal(true)

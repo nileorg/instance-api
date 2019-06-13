@@ -92,4 +92,39 @@ module.exports = class ForwardController {
       }
     }
   }
+  async toClient ({ authentication, clientId, action, parameters }) {
+    const { success, results } = await this.nodeController.isNodeTokenValid(authentication)
+    if (success && results.length > 0) {
+      const nodeId = results[0].node_id
+      const success = await this.saveToQueue({
+        senderType: 'node',
+        recipientType: 'client',
+        sender: nodeId,
+        recipient: clientId,
+        message: JSON.stringify({ action, parameters })
+      })
+      if (success) {
+        return {
+          status: 200,
+          body: {
+            success: true
+          }
+        }
+      } else {
+        return {
+          status: 500,
+          body: {
+            success: false
+          }
+        }
+      }
+    } else {
+      return {
+        status: 401,
+        body: {
+          success: false
+        }
+      }
+    }
+  }
 }

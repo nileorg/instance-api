@@ -178,13 +178,32 @@ module.exports = async ({ wsServer, dispatcher, sqliteDb, ipfsNode }) => {
    * @apiHeader {String} authentication Clients's unique token
    * @apiVersion 0.0.1
    * @apiName ForwardMessage
-   * @apiGroup Node
+   * @apiGroup Instance
    * @apiPermission none
   */
-  dispatcher.onPost('/forward', async (req, res) => {
+  dispatcher.onPost('/forward/node', async (req, res) => {
     const response = await forward.toNode({
       authentication: req.headers.authentication,
       nodeId: req.params.nodeId,
+      action: req.params.action,
+      parameters: req.params.parameters
+    })
+    respond(res, response)
+  })
+
+  /**
+   * @api {post} /forward Forward a message to a client
+   * interfacing WebSocket to HTTP clients
+   * @apiHeader {String} authentication Clients's unique token
+   * @apiVersion 0.0.1
+   * @apiName ForwardMessage
+   * @apiGroup Instance
+   * @apiPermission none
+  */
+  dispatcher.onPost('/forward/client', async (req, res) => {
+    const response = await forward.toClient({
+      authentication: req.headers.authentication,
+      clientId: req.params.clientId,
       action: req.params.action,
       parameters: req.params.parameters
     })
