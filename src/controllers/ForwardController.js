@@ -8,7 +8,7 @@ module.exports = class ForwardController {
     this.clientController = clientController
     this.queue = new Queue(this.db)
   }
-  async isNodeOnline (nodeId) {
+  isNodeOnline (nodeId) {
     return this.nodeController.online.find(n => n.id === parseInt(nodeId))
   }
   async onlineNodeForward ({ nodeId, action, parameters, clientId }) {
@@ -29,8 +29,23 @@ module.exports = class ForwardController {
         })
       })
     } else {
-      return false
+      return {
+        status: 500,
+        body: {
+          success: false
+        }
+      }
     }
+  }
+  async saveToQueue ({ senderType, recipientType, sender, recipient, message }) {
+    const success = await this.queue.create({
+      senderType,
+      recipientType,
+      sender,
+      recipient,
+      message
+    })
+    return success
   }
   async toNode ({ authentication, nodeId, action, parameters }) {
     const { success, results } = await this.clientController.isClientTokenValid(authentication)
@@ -45,13 +60,35 @@ module.exports = class ForwardController {
         })
         return result
       } else {
-        return {
-          status: 404
+        const success = await this.saveToQueue({
+          senderType: 'client',
+          recipientType: 'node',
+          sender: clientId,
+          recipient: nodeId,
+          message: JSON.stringify({ action, parameters })
+        })
+        if (success) {
+          return {
+            status: 200,
+            body: {
+              success: true
+            }
+          }
+        } else {
+          return {
+            status: 500,
+            body: {
+              success: false
+            }
+          }
         }
       }
     } else {
       return {
-        status: 401
+        status: 401,
+        body: {
+          success: false
+        }
       }
     }
   }

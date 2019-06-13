@@ -18,11 +18,11 @@ class Initializer {
     this.ipfsNode = new Ipfs(services.Ipfs)
   }
   async getServices () {
-    let dispatcher = this.httpServer ? await this.httpServer.getService() : null
+    let { http, dispatcher } = this.httpServer ? await this.httpServer.getService() : null
     let wsServer = this.wsServer ? await this.wsServer.getService() : null
     let sqliteDb = this.sqliteDb ? await this.sqliteDb.getService() : null
     let ipfsNode = this.ipfsNode ? await this.ipfsNode.getService() : null
-    return { wsServer, dispatcher, sqliteDb, ipfsNode }
+    return { wsServer, dispatcher, sqliteDb, ipfsNode, http }
   }
 }
 module.exports = Initializer

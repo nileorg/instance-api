@@ -1,4 +1,4 @@
-/* global describe before after afterEach it */
+/* global describe before after it */
 const expect = require('chai').expect
 const io = require('socket.io-client')
 const fetch = require('node-fetch')
@@ -61,6 +61,9 @@ describe('Testing instance', function () {
   let client
   let socket
   let wsServer
+  let db
+  let http
+  let ipfsNode
   // increase test timeout to 10 seconds
   this.timeout(10000)
 
@@ -71,6 +74,9 @@ describe('Testing instance', function () {
       .getServices()
       .then((services) => {
         wsServer = services.wsServer
+        db = services.sqliteDb
+        http = services.http
+        ipfsNode = services.ipfsNode
         return require('../src/Routes')(services)
       })
       .then((controllers) => {
@@ -85,23 +91,22 @@ describe('Testing instance', function () {
   })
 
   after(function (done) {
+    http.close()
     wsServer.close()
     node.close()
+    db.close()
+    ipfsNode.stop()
     done()
   })
 
   describe('Testing', function () {
-    afterEach(function (done) {
-      socket.removeListener('logged')
-      done()
-    })
     it('Should log in existing node', async () => {
       const { status } = await node.login({
         authentication: 'ev8hg1550736689241'
       })
       expect(status).to.be.equal(200)
     })
-    it('Should forward http message via ws instance', async () => {
+    it('Should forward http message via ws instance to online node', async () => {
       // Socket is node with id 112, it listens to a test action and replies with "response"
       node.on('test', (data, fn) => {
         fn({
@@ -112,6 +117,22 @@ describe('Testing instance', function () {
       // This is the client calling the instance forward API, calling the test action on node with id 112
       const res = await client.forward({
         nodeId: 112,
+        action: 'test',
+        parameters: 'hello',
+        'authentication': 'NZmTj1550736689151'
+      })
+      const data = await res.json()
+      expect(data.success).to.be.equal(true)
+    })
+    it('Should not log in non-existing node', async () => {
+      const { status } = await node.logout({
+        'authentication': 'fakeid'
+      })
+      expect(status).to.be.equal(401)
+    })
+    it('Should forward http message via ws instance to offline node', async () => {
+      const res = await client.forward({
+        nodeId: 113,
         action: 'test',
         parameters: 'hello',
         'authentication': 'NZmTj1550736689151'

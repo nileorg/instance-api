@@ -18,7 +18,7 @@ module.exports = class HttpServer {
         if (err) {
           reject(new Error(`Cannot bind port ${this.param.port}`))
         }
-        resolve(this.dispatcher)
+        resolve({ http: this.server, dispatcher: this.dispatcher })
       })
     })
   }

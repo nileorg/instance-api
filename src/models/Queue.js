@@ -2,18 +2,22 @@ module.exports = class Queue {
   constructor (db) {
     this.db = db
   }
-  async create ({ sender, recipient, message }) {
+  async create ({ senderType, recipientType, sender, recipient, message }) {
     const { success } = await this.db.run(`
         INSERT INTO queue (
           sender,
           recipient,
-          message
+          message,
+          sender_type,
+          recipient_type
         ) VALUES
-        (?, ?, ?)
+        (?, ?, ?, ?, ?)
     `, [
       sender,
       recipient,
-      message
+      message,
+      senderType,
+      recipientType
     ])
     return success
   }
