@@ -1,3 +1,5 @@
+'use strict';
+
 class Initializer {
   constructor (services) {
     /* for (serviceName in services) {
@@ -17,7 +19,7 @@ class Initializer {
     const Ipfs = require('./initializers/Ipfs')
     this.ipfsNode = new Ipfs(services.Ipfs)
   }
-  async getServices () {
+  async getServices() {
     let { http, dispatcher } = this.httpServer ? await this.httpServer.getService() : null
     let wsServer = this.wsServer ? await this.wsServer.getService() : null
     let sqliteDb = this.sqliteDb ? await this.sqliteDb.getService() : null
