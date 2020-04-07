@@ -28,4 +28,7 @@ The Instance Service (Node.js ) is composed by two parts:
 npm start
 ```
 
+## If you have problem running the project run
+```
 npm rebuild bcrypt --build-from-source
+```
