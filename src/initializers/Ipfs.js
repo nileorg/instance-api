@@ -3,7 +3,7 @@ const IPFS = require('ipfs')
 module.exports = class Ipfs {
   constructor (param) {
     this.param = param
-    this.ipfsNode = new IPFS({
+    this.ipfsNode = IPFS.create({
       silent: true,
       repo: this.param.path,
       config: {
@@ -15,9 +15,7 @@ module.exports = class Ipfs {
   }
   async getService () {
     return new Promise((resolve, reject) => {
-      this.ipfsNode.on('ready', () => {
-        resolve(this.ipfsNode)
-      })
+      resolve(this.ipfsNode)
     })
   }
 }
