@@ -13,15 +13,11 @@ The Instance Service (Node.js ) is composed by two parts:
     npm install
     ```
 2. Create empty file `./var/instance.db`
-3. Run the migrations up
+3. Migrate migrations to the database
     ```
     npm run migrate up
     ```
-4. Migrate instance-lib-js migrations to the database
-    ```
-    npm run migrate-instance-lib-js
-    ```
-5. Copy and rename  `./instance.config.example.json` to `./instance.config.json`
+4. Copy and rename  `./instance.config.example.json` to `./instance.config.json`
 
 ## Running
 ```
