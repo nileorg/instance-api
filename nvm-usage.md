@@ -4,3 +4,5 @@ export NVM_DIR="/Users/Admin/.nvm"
 nvm ls-remote
 
 nvm install 12.16.1
+
+nvm use 12.16.1
